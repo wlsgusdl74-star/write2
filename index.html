@@ -1,3 +1,4 @@
+<!-- STREAMING_CHUNK:Initializing HTML structure... -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -37,8 +38,9 @@
 <body class="bg-slate-50 text-slate-800">
   <div id="root"></div>
 
+  <!-- STREAMING_CHUNK:Defining React application state and handlers... -->
   <script type="text/babel">
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwknhjBLUHK9s8VzufToci1e8TgTEMlAY7VPbjjdU4AEVI2XB8IPQAe2kTX7EJTJiPl/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwknhjBLUHK9s8VzufToci1e8TgTEMlAY7VPbjjdU4AEVI2XB8IPQAe2kTX7EJTJiPl/exec"; 
     const GEMINI_API_KEY = ""; // AI 제목 추천을 원하시면 여기에 키를 입력하세요
 
     const { useState, useEffect, useRef } = React;
@@ -53,7 +55,6 @@
 
     function App() {
       const [activeTab, setActiveTab] = useState('student');
-      const [classList, setClassList] = useState([]);
       
       const [showPasswordModal, setShowPasswordModal] = useState(false);
       const [authMode, setAuthMode] = useState('login'); 
@@ -64,8 +65,7 @@
       const passwordInputRef = useRef(null);
 
       const [studentName, setStudentName] = useState('');
-      const [targetTeacher, setTargetTeacher] = useState('');
-      const [customClassInput, setCustomClassInput] = useState(''); 
+      const [targetTeacher, setTargetTeacher] = useState(''); // 학생들이 직접 입력하는 반 이름
       const [activityTitle, setActivityTitle] = useState('');
       const [mood, setMood] = useState('😊 신나고 즐거워요');
       const [shortMsg, setShortMsg] = useState('');
@@ -99,40 +99,14 @@
       };
 
       useEffect(() => {
-        fetchClasses();
-      }, []);
-
-      useEffect(() => {
-        if (classList.length > 0 && !targetTeacher) {
-          setTargetTeacher(classList[0]);
-        }
-        if (classList.length > 0 && !loginClass) {
-          setLoginClass(classList[0]);
-        }
-      }, [classList]);
-
-      useEffect(() => {
         if (showPasswordModal && passwordInputRef.current) {
           setTimeout(() => passwordInputRef.current.focus(), 100);
         }
       }, [showPasswordModal, authMode]);
 
       useEffect(() => {
-        if (activeTab === 'teacher') fetchSheetData();
-      }, [activeTab]);
-
-      const fetchClasses = async () => {
-        try {
-          const response = await fetch(`${SCRIPT_URL}?action=getClasses`).catch(() => null);
-          if (!response || !response.ok) return;
-          const result = await response.json();
-          if (result.success) {
-            setClassList(result.data || []);
-          }
-        } catch (err) {
-          console.warn("반 목록 불러오기 건너뜀 (연결 대기중)");
-        }
-      };
+        if (activeTab === 'teacher' && loggedInTeacher) fetchSheetData();
+      }, [activeTab, loggedInTeacher]);
 
       const fetchSheetData = async () => {
         setIsLoading(true);
@@ -158,8 +132,8 @@
       };
 
       const openCanvasModal = async (className) => {
-        const targetCls = className || (targetTeacher === 'direct_input' ? customClassInput.trim() : targetTeacher) || loggedInTeacher;
-        if (!targetCls) return triggerToast('⚠️ 반을 선택하거나 입력해주세요!');
+        const targetCls = className || targetTeacher.trim() || loggedInTeacher;
+        if (!targetCls) return triggerToast('⚠️ 확인할 반 이름을 입력해주세요!');
 
         setIsLoading(true);
         setLoadingText('📰 신문 캔버스를 불러오는 중...');
@@ -184,9 +158,10 @@
       };
 
       const handleTeacherRegister = async () => {
-        if (!registerClass.trim()) return triggerToast('⚠️ 반 번호(이름)를 입력해주세요.');
+        const trimmedClass = registerClass.trim();
+        if (!trimmedClass) return triggerToast('⚠️ 반 이름을 입력해주세요.');
         if (!passwordInput.trim()) return triggerToast('⚠️ 비밀번호를 입력해주세요.');
-        
+
         setIsLoading(true);
         setLoadingText('새로운 반을 등록하는 중...');
         
@@ -194,7 +169,7 @@
           const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ action: 'registerTeacher', className: registerClass.trim(), password: passwordInput }),
+            body: JSON.stringify({ action: 'registerTeacher', className: trimmedClass, password: passwordInput }),
             redirect: 'follow'
           });
           
@@ -202,9 +177,8 @@
           try {
             const result = JSON.parse(text);
             if (result.success) {
-              triggerToast(`🎉 [${registerClass}] 반이 등록되었습니다!`);
-              await fetchClasses();
-              setLoggedInTeacher(registerClass.trim());
+              triggerToast(`🎉 [${trimmedClass}] 반이 등록되었습니다!`);
+              setLoggedInTeacher(trimmedClass);
               setShowPasswordModal(false);
               setPasswordInput('');
               setRegisterClass('');
@@ -223,7 +197,8 @@
       };
 
       const handleTeacherLogin = async () => {
-        if (!loginClass) return triggerToast('⚠️ 먼저 등록된 반을 선택해주세요.');
+        const trimmedLoginClass = loginClass.trim();
+        if (!trimmedLoginClass) return triggerToast('⚠️ 로그인할 반 이름을 입력해주세요.');
         if (!passwordInput.trim()) return triggerToast('⚠️ 비밀번호를 입력해주세요.');
 
         setIsLoading(true);
@@ -233,7 +208,7 @@
           const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ action: 'loginTeacher', className: loginClass, password: passwordInput }),
+            body: JSON.stringify({ action: 'loginTeacher', className: trimmedLoginClass, password: passwordInput }),
             redirect: 'follow'
           });
           
@@ -243,11 +218,12 @@
             if (result.success) {
               setShowPasswordModal(false);
               setPasswordInput('');
-              setLoggedInTeacher(loginClass);
+              setLoginClass('');
+              setLoggedInTeacher(trimmedLoginClass);
               setActiveTab('teacher');
-              triggerToast(`🔓 환영합니다, ${loginClass} 선생님!`);
+              triggerToast(`🔓 환영합니다, ${trimmedLoginClass} 선생님!`);
             } else {
-              triggerToast('❌ 로그인 실패: 비밀번호가 틀렸습니다.');
+              triggerToast('❌ 로그인 실패: 반 이름이나 비밀번호가 틀렸습니다.');
               setPasswordInput('');
             }
           } catch(e) {
@@ -282,9 +258,9 @@
       };
 
       const handleSaveToSpreadsheet = async () => {
-        const finalTeacher = targetTeacher === 'direct_input' ? customClassInput.trim() : targetTeacher;
+        const finalTeacher = targetTeacher.trim();
         if (!studentName.trim() || !activityTitle.trim()) return triggerToast('⚠️ 학생 이름과 기사 주제를 모두 입력해 주세요!');
-        if (!finalTeacher) return triggerToast('⚠️ 반 번호(이름)를 선택하거나 입력해 주세요!');
+        if (!finalTeacher) return triggerToast('⚠️ 우리 반 이름을 입력해 주세요!');
 
         setIsLoading(true);
         setLoadingText('🚀 기사를 제출하는 중...');
@@ -349,7 +325,8 @@
           const result = await response.json();
 
           if (result.candidates && result.candidates[0].content?.parts?.[0]?.text) {
-            let jsonText = result.candidates[0].content.parts[0].text.replace(/^```json/i, '').replace(/```$/i, '').trim();
+            let jsonText = result.candidates[0].content.parts[0].text.replace(/^
+```json/i, '').replace(/```$/i, '').trim();
             setSuggestedTitles(JSON.parse(jsonText));
             triggerToast('✨ AI 도우미가 제목을 추천했어요!');
           } else {
@@ -411,6 +388,7 @@
         a.click();
       };
 
+      /* STREAMING_CHUNK:Rendering application UI... */
       return (
         <div className="min-h-screen pb-24 relative">
           {isLoading && (
@@ -489,14 +467,8 @@
                 {authMode === 'login' ? (
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 ml-1">로그인할 반 선택</label>
-                      {classList.length > 0 ? (
-                        <select value={loginClass} onChange={(e) => setLoginClass(e.target.value)} className="w-full px-4 py-3 bg-slate-50 rounded-xl border font-bold outline-none">
-                          {classList.map((c, i) => <option key={i} value={c}>{c}</option>)}
-                        </select>
-                      ) : (
-                        <div className="w-full p-3 bg-rose-50 text-rose-500 rounded-xl font-bold text-sm text-center">등록된 반이 없습니다. 새로 만들어주세요!</div>
-                      )}
+                      <label className="text-xs font-bold text-slate-500 ml-1">로그인할 반 이름 입력</label>
+                      <input type="text" value={loginClass} onChange={(e) => setLoginClass(e.target.value)} placeholder="예: 5반 또는 3" className="w-full px-4 py-3 bg-slate-50 rounded-xl border font-bold outline-none" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-500 ml-1">비밀번호</label>
@@ -510,8 +482,8 @@
                 ) : (
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-500 ml-1">반 번호 또는 이름 (예: 5 또는 3반)</label>
-                      <input type="text" value={registerClass} onChange={(e) => setRegisterClass(e.target.value)} placeholder="번호 입력 (예: 5)" className="w-full px-4 py-3 bg-slate-50 rounded-xl border font-bold outline-none" />
+                      <label className="text-xs font-bold text-slate-500 ml-1">새로 만들 반 이름 (예: 5 또는 3반)</label>
+                      <input type="text" value={registerClass} onChange={(e) => setRegisterClass(e.target.value)} placeholder="반 이름 입력" className="w-full px-4 py-3 bg-slate-50 rounded-xl border font-bold outline-none" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-500 ml-1">설정할 비밀번호</label>
@@ -560,26 +532,10 @@
                     <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="이름 입력" className="w-full bg-transparent px-3 py-1.5 font-bold text-sm outline-none" />
                   </div>
 
-                  <div className="flex items-center gap-2 bg-indigo-50 p-2.5 rounded-2xl border border-indigo-200">
-                    <span className="text-xs font-extrabold text-indigo-800 shrink-0">👨‍🏫 우리 반:</span>
-                    {classList.length > 0 ? (
-                      <div className="w-full flex items-center gap-1">
-                        <select value={targetTeacher} onChange={(e) => setTargetTeacher(e.target.value)} className="w-full bg-transparent px-2 py-1.5 font-bold text-sm text-indigo-900 outline-none cursor-pointer">
-                          {classList.map((c, idx) => <option key={idx} value={c}>{c}</option>)}
-                          <option value="direct_input">➕ 직접 입력하기</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <span className="text-xs font-bold text-rose-500 px-2">등록된 반이 없어요</span>
-                    )}
+                  <div className="flex items-center gap-2 bg-indigo-50 p-2.5 rounded-2xl border border-indigo-200 md:col-span-1">
+                    <span className="text-xs font-extrabold text-indigo-900 shrink-0">👨‍🏫 우리 반:</span>
+                    <input type="text" value={targetTeacher} onChange={(e) => setTargetTeacher(e.target.value)} placeholder="예: 5반" className="w-full bg-white px-3 py-1.5 rounded-xl font-bold text-sm text-indigo-900 outline-none shadow-sm" />
                   </div>
-
-                  {(classList.length === 0 || targetTeacher === 'direct_input') && (
-                    <div className="flex items-center gap-2 bg-indigo-100 p-2.5 rounded-2xl border border-indigo-300 md:col-span-2 lg:col-span-1">
-                      <span className="text-xs font-extrabold text-indigo-900 shrink-0">✏️ 반 입력:</span>
-                      <input type="text" value={customClassInput} onChange={(e) => setCustomClassInput(e.target.value)} placeholder="예: 5 또는 3반" className="w-full bg-white px-3 py-1.5 rounded-xl font-bold text-sm text-indigo-900 outline-none shadow-sm" />
-                    </div>
-                  )}
 
                   <div className="flex items-center gap-2 bg-purple-50 p-2.5 rounded-2xl border border-purple-200">
                     <span className="text-xs font-extrabold text-purple-800 shrink-0">✨ 주제:</span>
@@ -774,7 +730,7 @@
                     )}
 
                     <div className="bg-indigo-50 p-7 rounded-3xl border border-indigo-200 space-y-5">
-                      <h3 className="text-lg font-black text-indigo-900">📮 {(targetTeacher === 'direct_input' ? customClassInput : targetTeacher) ? `[${targetTeacher === 'direct_input' ? customClassInput : targetTeacher}] 반에` : ''} 제출하기</h3>
+                      <h3 className="text-lg font-black text-indigo-900">📮 {targetTeacher ? `[${targetTeacher}] 반에` : ''} 제출하기</h3>
                       <div>
                         <label className="text-sm font-extrabold text-indigo-800 block mb-2">💬 한 줄 소감</label>
                         <input type="text" value={shortMsg} onChange={(e) => setShortMsg(e.target.value)} placeholder="예: 기사를 완성해서 뿌듯합니다!" className="w-full px-5 py-3.5 bg-white rounded-2xl border-2 border-indigo-200 font-bold text-sm outline-none shadow-sm"/>
@@ -791,7 +747,7 @@
                 <div className="bg-slate-900 text-white p-8 rounded-[2rem] shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-slate-800">
                   <div>
                     <span className="text-xs font-black text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-lg border border-emerald-500/30">교사용 관리자 모드</span>
-                    <h2 className="text-3xl font-black mt-3">구글 시트 응답 현황 <span className="text-xl text-emerald-300 ml-2">({loggedInTeacher} 접속중)</span></h2>
+                    <h2 className="text-3xl font-black mt-3">구글 시트 응답 현황 <span className="text-xl text-emerald-300 ml-2">({loggedInTeacher} 반 접속중)</span></h2>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <button onClick={() => openCanvasModal(loggedInTeacher)} className="bg-amber-600 hover:bg-amber-500 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-lg cursor-pointer">📰 캔버스(신문 보기)</button>
@@ -855,3 +811,4 @@
   </script>
 </body>
 </html>
+```eof
