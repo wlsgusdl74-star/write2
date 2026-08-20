@@ -1,3 +1,4 @@
+<!-- STREAMING_CHUNK:Initializing HTML layout... -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -37,6 +38,7 @@
 <body class="bg-slate-50 text-slate-800">
   <div id="root"></div>
 
+  <!-- STREAMING_CHUNK:Configuring React application logic... -->
   <script type="text/babel">
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwknhjBLUHK9s8VzufToci1e8TgTEMlAY7VPbjjdU4AEVI2XB8IPQAe2kTX7EJTJiPl/exec"; 
     const GEMINI_API_KEY = ""; 
@@ -53,7 +55,6 @@
 
     function App() {
       const [activeTab, setActiveTab] = useState('student');
-      
       const [showPasswordModal, setShowPasswordModal] = useState(false);
       const [authMode, setAuthMode] = useState('login'); 
       const [loginClass, setLoginClass] = useState(''); 
@@ -386,6 +387,7 @@
         a.click();
       };
 
+      /* STREAMING_CHUNK:Rendering main application UI components... */
       return (
         <div className="min-h-screen pb-24 relative">
           {isLoading && (
